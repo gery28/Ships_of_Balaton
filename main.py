@@ -1,5 +1,3 @@
-# Koczan Gergo
-# ágyúgolyók lövése az egér felé
 import random
 import time
 
