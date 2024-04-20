@@ -399,6 +399,7 @@ inGame = False
 noStartButton = True
 noSaveButton = True
 canPressSave = False
+quit_signal = False
 
 while running:
     now = pygame.time.get_ticks()
@@ -407,8 +408,7 @@ while running:
             if savestate:
                 with open("number.txt", "w") as f:
                     f.write(str(gold))
-            pygame.quit()
-            quit()
+            quit_signal = True
         if inGame:
             if event.type == spawn_timer:
                 if len(fishes) < int(difficulty):
@@ -434,7 +434,9 @@ while running:
                     inGame = False
                     noStartButton = True
                     noSaveButton = True
-
+    if quit_signal:
+        pygame.quit()
+        break
     if inGame:
         if health <= 0:
             lostdisplay = game_font.render('You lost', True, (255, 0, 0))
