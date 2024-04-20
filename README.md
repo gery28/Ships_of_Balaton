@@ -11,5 +11,9 @@ The main goal is to shoot down the fish (currently just sharks) and collect ches
 + Open chest: E
 
 # Errors:
-+ Sometimes the save swich is gets clicked twice and doesn't swich
++ Sometimes the save switch is gets clicked twice and doesn't swich
 + Sometimes the ship animation doesn't work when 2 buttons are pressed
+
+# Windows Build
++ The executable may interfere with windows defender
++ Windows may flag it as a virus
