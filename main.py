@@ -12,7 +12,8 @@ screen = pygame.display.set_mode((WIDHT, HEIGHT))
 pygame.display.set_caption("Ships of Balaton")
 player_x = WIDHT / 2
 player_y = HEIGHT / 2
-difficulty = 5
+starting_difficulty = 5
+difficulty = starting_difficulty
 health = 100
 OutOfHealth = False
 gold = 0
@@ -497,6 +498,19 @@ for i in range(10):
 for i in range(10):
     islands.add(Island())
 
+
+def respawn_sequence():
+    fishes.empty()
+    chests.empty()
+    islands.empty()
+    for i in range(int(difficulty)):
+        fishes.add(Fish())
+    for i in range(10):
+        chests.add(Chest())
+    for i in range(10):
+        islands.add(Island())
+
+
 lastshoot = pygame.time.get_ticks()
 lastUseCircle = pygame.time.get_ticks()
 lastHealed = pygame.time.get_ticks()
@@ -585,6 +599,8 @@ while running:
             time.sleep(3)
             inGame = False
             noStartButton = True
+            difficulty = starting_difficulty
+            respawn_sequence()
             health = 100
     else:
         health = 100
