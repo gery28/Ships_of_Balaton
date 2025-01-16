@@ -35,6 +35,11 @@ golddisplay = game_font.render('Gold: ' + str(int(gold)), True, (255, 0, 0))
 
 chestButtonSpawned = False
 
+canMoveUp = True
+canMoveDown = True
+canMoveLeft = True
+canMoveRight = True
+
 
 def inScreen(x_pos, y_pos):
     if x_pos > 0 and x_pos < WIDHT and y_pos > 0 and y_pos < HEIGHT:
@@ -70,6 +75,7 @@ class PlayerShip(pygame.sprite.Sprite):
                                             (self.xsize, self.ysize))
         self.rect = self.image.get_rect(center=(WIDHT / 2, HEIGHT / 2))
         self.speed = 5
+        self.collision = [False] * 9
 
     def rotation(self, rotationface):
         if rotationface == 1:
@@ -99,17 +105,107 @@ class PlayerShip(pygame.sprite.Sprite):
         elif keys[pygame.K_a]:
             self.rotation(4)
 
-    def collisonCheck(self):
+    def collisionCheck(self):
         global health
         if pygame.sprite.spritecollide(playership.sprite, fishes, True):
             health -= 5
+        if pygame.sprite.spritecollide(self, islands, False):
+            collided_enemies = pygame.sprite.spritecollide(self, islands, False)
+            for enemy in collided_enemies:
+                rect = enemy.rect
+                self.collision[0] = rect.collidepoint(self.rect.topleft)
+                self.collision[1] = rect.collidepoint(self.rect.topright)
+                self.collision[2] = rect.collidepoint(self.rect.bottomleft)
+                self.collision[3] = rect.collidepoint(self.rect.bottomright)
+
+                self.collision[4] = rect.collidepoint(self.rect.midleft)
+                self.collision[5] = rect.collidepoint(self.rect.midright)
+                self.collision[6] = rect.collidepoint(self.rect.midtop)
+                self.collision[7] = rect.collidepoint(self.rect.midbottom)
+
+                self.collision[8] = rect.collidepoint(self.rect.center)
+
+    def block_movement(self):
+        global canMoveUp, canMoveDown, canMoveLeft, canMoveRight
+
+        # if self.collision[0] or self.collision[2] or self.collision[4]:
+        #     canMoveLeft = False
+        #     print("left")
+        # else:
+        #     canMoveLeft = True
+        # if self.collision[1] or self.collision[3] or self.collision[5]:
+        #     canMoveRight = False
+        #     print("right")
+        # else:
+        #     canMoveRight = True
+        # if self.collision[0] or self.collision[1] or self.collision[6]:
+        #     canMoveUp = False
+        #     print("top")
+        # else:
+        #     canMoveUp = True
+        # if self.collision[2] or self.collision[3] or self.collision[7]:
+        #     canMoveDown = False
+        #     print("bottom")
+        # else:
+        #     canMoveDown = True
+        # if self.collision[8]:
+        #     print("center")
+        if self.collision[4]:
+            canMoveLeft = False
+            print("left")
+        else:
+            canMoveLeft = True
+        if self.collision[5]:
+            canMoveRight = False
+            print("right")
+        else:
+            canMoveRight = True
+        if self.collision[6]:
+            canMoveUp = False
+            print("top")
+        else:
+            canMoveUp = True
+        if self.collision[7]:
+            canMoveDown = False
+            print("bottom")
+        else:
+            canMoveDown = True
+        if self.collision[8]:
+            print("center")
 
     def update(self):
         self.keys_down()
-        self.collisonCheck()
+        self.collisionCheck()
+        self.block_movement()
+        self.collision = [False] * 9
         player_x = self.rect.centerx
         player_y = self.rect.centery
         # healthdisplay = game_font.render('Health: ' + str(self.health), True, (255, 0, 0))
+
+
+class Island(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Island, self).__init__()
+        self.x_size = 100
+        self.y_size = 100
+        self.image = pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
+                                            (self.x_size, self.y_size))
+        self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
+        self.alternatespeed = 5
+
+    def keys_down(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w] and canMoveUp:
+            self.rect.centery += self.alternatespeed
+        if keys[pygame.K_s] and canMoveDown:
+            self.rect.centery -= self.alternatespeed
+        if keys[pygame.K_a] and canMoveLeft:
+            self.rect.centerx += self.alternatespeed
+        if keys[pygame.K_d] and canMoveRight:
+            self.rect.centerx -= self.alternatespeed
+
+    def update(self):
+        self.keys_down()
 
 
 goldColor = (242, 230, 65)
@@ -145,13 +241,13 @@ class Fish(pygame.sprite.Sprite):
         self.y_size = 80
         self.type = "swordfish"
         forward1 = pygame.transform.scale(pygame.image.load("img/swordfish-1.png").convert_alpha(),
-                                         (self.x_size, self.y_size))
+                                          (self.x_size, self.y_size))
         forward2 = pygame.transform.scale(pygame.image.load("img/swordfish-2.png").convert_alpha(),
-                                         (self.x_size, self.y_size))
+                                          (self.x_size, self.y_size))
         forward3 = pygame.transform.scale(pygame.image.load("img/swordfish-3.png").convert_alpha(),
-                                         (self.x_size, self.y_size))
+                                          (self.x_size, self.y_size))
         forward4 = pygame.transform.scale(pygame.image.load("img/swordfish-4.png").convert_alpha(),
-                                         (self.x_size, self.y_size))
+                                          (self.x_size, self.y_size))
         self.forward_pics = [forward1, forward2, forward3, forward4]
         backward1 = pygame.transform.flip(
             pygame.transform.scale(pygame.image.load("img/swordfish-1.png").convert_alpha(),
@@ -179,14 +275,14 @@ class Fish(pygame.sprite.Sprite):
 
     def keys_down(self):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
+        if keys[pygame.K_w] and canMoveUp:
             self.rect.centery += self.alternatespeed
-        elif keys[pygame.K_d]:
-            self.rect.centerx -= self.alternatespeed
-        elif keys[pygame.K_s]:
+        if keys[pygame.K_s] and canMoveDown:
             self.rect.centery -= self.alternatespeed
-        elif keys[pygame.K_a]:
+        if keys[pygame.K_a] and canMoveLeft:
             self.rect.centerx += self.alternatespeed
+        if keys[pygame.K_d] and canMoveRight:
+            self.rect.centerx -= self.alternatespeed
 
     def meleeAttack(self):
         angle = math.atan2(self.target_y - self.y_float, self.target_x - self.x_float)
@@ -289,14 +385,14 @@ class Chest(pygame.sprite.Sprite):
 
     def alternatemovement(self):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
+        if keys[pygame.K_w] and canMoveUp:
             self.rect.centery += self.alternatespeed
-        elif keys[pygame.K_s]:
+        if keys[pygame.K_s] and canMoveDown:
             self.rect.centery -= self.alternatespeed
-        elif keys[pygame.K_d]:
-            self.rect.centerx -= self.alternatespeed
-        elif keys[pygame.K_a]:
+        if keys[pygame.K_a] and canMoveLeft:
             self.rect.centerx += self.alternatespeed
+        if keys[pygame.K_d] and canMoveRight:
+            self.rect.centerx -= self.alternatespeed
 
     def openState(self):
         global gold
@@ -385,15 +481,12 @@ class SaveButton(pygame.sprite.Sprite):
 
 
 playership = pygame.sprite.GroupSingle()
+islands = pygame.sprite.Group()
 fishes = pygame.sprite.Group()
 canonballs = pygame.sprite.Group()
 goldCirce = pygame.sprite.GroupSingle()
 startButton = pygame.sprite.GroupSingle()
 saveButton = pygame.sprite.GroupSingle()
-
-playership.add(PlayerShip())
-for i in range(int(difficulty)):
-    fishes.add(Fish())
 chests = pygame.sprite.Group()
 
 playership.add(PlayerShip())
@@ -401,6 +494,8 @@ for i in range(int(difficulty)):
     fishes.add(Fish())
 for i in range(10):
     chests.add(Chest())
+for i in range(10):
+    islands.add(Island())
 
 lastshoot = pygame.time.get_ticks()
 lastUseCircle = pygame.time.get_ticks()
@@ -464,11 +559,13 @@ while running:
         fishes.draw(screen)
         canonballs.draw(screen)
         goldCirce.draw(screen)
+        islands.draw(screen)
         chests.draw(screen)
         playership.update()
         fishes.update()
         canonballs.update()
         goldCirce.update()
+        islands.update()
         chests.update()
         drawbar(25, 25, 300, 25, health, (0, 0, 0), (255, 0, 0))
         drawbar(WIDHT - 360, HEIGHT - 70, 300, 25, min((now - lastUseCircle) / goldcircledelay * 100, 100),
