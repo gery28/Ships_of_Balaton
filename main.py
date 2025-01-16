@@ -143,16 +143,16 @@ class Fish(pygame.sprite.Sprite):
         super(Fish, self).__init__()
         self.x_size = 170
         self.y_size = 80
-        self.type = "shark"
-        foward1 = pygame.transform.scale(pygame.image.load("img/swordfish-1.png").convert_alpha(),
+        self.type = "swordfish"
+        forward1 = pygame.transform.scale(pygame.image.load("img/swordfish-1.png").convert_alpha(),
                                          (self.x_size, self.y_size))
-        foward2 = pygame.transform.scale(pygame.image.load("img/swordfish-2.png").convert_alpha(),
+        forward2 = pygame.transform.scale(pygame.image.load("img/swordfish-2.png").convert_alpha(),
                                          (self.x_size, self.y_size))
-        foward3 = pygame.transform.scale(pygame.image.load("img/swordfish-3.png").convert_alpha(),
+        forward3 = pygame.transform.scale(pygame.image.load("img/swordfish-3.png").convert_alpha(),
                                          (self.x_size, self.y_size))
-        foward4 = pygame.transform.scale(pygame.image.load("img/swordfish-4.png").convert_alpha(),
+        forward4 = pygame.transform.scale(pygame.image.load("img/swordfish-4.png").convert_alpha(),
                                          (self.x_size, self.y_size))
-        self.foward_pics = [foward1, foward2, foward3, foward4]
+        self.forward_pics = [forward1, forward2, forward3, forward4]
         backward1 = pygame.transform.flip(
             pygame.transform.scale(pygame.image.load("img/swordfish-1.png").convert_alpha(),
                                    (self.x_size, self.y_size)), True, False)
@@ -166,12 +166,16 @@ class Fish(pygame.sprite.Sprite):
             pygame.transform.scale(pygame.image.load("img/swordfish-4.png").convert_alpha(),
                                    (self.x_size, self.y_size)), True, False)
         self.backward_pics = [backward1, backward2, backward3, backward4]
-        self.image = foward1
+        self.image = forward1
         self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
-        self.movementspeed = 7
+        self.movement_speed = 7
         self.alternatespeed = 5
-        self.foward = True
+        self.forward = True
         self.picIndex = 0
+        self.target_x = WIDHT / 2
+        self.target_y = HEIGHT / 2
+        self.x_float = self.rect.centerx
+        self.y_float = self.rect.centery
 
     def keys_down(self):
         keys = pygame.key.get_pressed()
@@ -185,25 +189,38 @@ class Fish(pygame.sprite.Sprite):
             self.rect.centerx += self.alternatespeed
 
     def meleeAttack(self):
+        angle = math.atan2(self.target_y - self.y_float, self.target_x - self.x_float)
+        dx = self.movement_speed * math.cos(angle)
+        dy = self.movement_speed * math.sin(angle)
+        # end of pulled code
+
+        self.x_float += dx
+        self.y_float += dy
+        self.rect.centerx = int(self.x_float)
+        self.rect.centery = int(self.y_float)
         if player_x - self.rect.centerx < 0:
-            self.rect.right -= self.movementspeed
-            self.foward = False
+            self.forward = False
         elif player_x - self.rect.centerx > 0:
-            self.rect.right += self.movementspeed
-            self.foward = True
-        if player_y - self.rect.centery > 0:
-            self.rect.top += self.movementspeed
-        elif player_y - self.rect.centery < 0:
-            self.rect.top -= self.movementspeed
+            self.forward = True
+        # if player_x - self.rect.centerx < 0:
+        #     self.rect.right -= self.movement_speed
+        #     self.forward = False
+        # elif player_x - self.rect.centerx > 0:
+        #     self.rect.right += self.movement_speed
+        #     self.forward = True
+        # if player_y - self.rect.centery > 0:
+        #     self.rect.top += self.movement_speed
+        # elif player_y - self.rect.centery < 0:
+        #     self.rect.top -= self.movement_speed
 
     def imageLoad(self):
-        if self.picIndex < len(self.foward_pics) - 1:
+        if self.picIndex < len(self.forward_pics) - 1:
             self.picIndex += 0.3
         else:
             self.picIndex = 0
 
-        if self.foward:
-            self.image = self.foward_pics[int(self.picIndex)]
+        if self.forward:
+            self.image = self.forward_pics[int(self.picIndex)]
         else:
             self.image = self.backward_pics[int(self.picIndex)]
 
@@ -250,7 +267,7 @@ class Bullet(pygame.sprite.Sprite):
             collided_enemies = pygame.sprite.spritecollide(self, fishes, True)
             for enemy in collided_enemies:
                 self.hittedenemy = enemy.type
-            if self.hittedenemy == "shark":
+            if self.hittedenemy == "swordfish":
                 self.goldget = random.randint(1, 3)
             gold += self.goldget
             self.kill()
