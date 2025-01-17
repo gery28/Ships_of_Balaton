@@ -75,6 +75,7 @@ class PlayerShip(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
                                             (self.xsize, self.ysize))
         self.rect = self.image.get_rect(center=(WIDHT / 2, HEIGHT / 2))
+        self.mask = pygame.mask.from_surface(self.image)
         self.speed = 5
         self.collision = [False] * 9
 
@@ -107,11 +108,17 @@ class PlayerShip(pygame.sprite.Sprite):
             self.rotation(4)
 
     def collisionCheck(self):
-        global health
-        if pygame.sprite.spritecollide(playership.sprite, fishes, True):
+        global health, canMoveUp, canMoveDown, canMoveLeft, canMoveRight
+        canMoveUp = True
+        canMoveDown = True
+        canMoveLeft = True
+        canMoveRight = True
+        rect = []
+        if pygame.sprite.spritecollide(playership.sprite, fishes, True, pygame.sprite.collide_mask):
             health -= 5
-        if pygame.sprite.spritecollide(self, islands, False):
-            collided_enemies = pygame.sprite.spritecollide(self, islands, False)
+
+        if pygame.sprite.spritecollide(self, islands, False, pygame.sprite.collide_mask):
+            collided_enemies = pygame.sprite.spritecollide(self, islands, False, pygame.sprite.collide_mask)
             for enemy in collided_enemies:
                 rect = enemy.rect
                 self.collision[0] = rect.collidepoint(self.rect.topleft)
@@ -126,58 +133,56 @@ class PlayerShip(pygame.sprite.Sprite):
 
                 self.collision[8] = rect.collidepoint(self.rect.center)
 
-    def block_movement(self):
+                # (self.rect.midtop[1] < rect.midtop[1] and self.rect.midbottom[1] > rect.midbottom[1])
+
+                if ((self.rect.centery - rect.height < rect.midtop[1] and self.rect.centery + rect.height >
+                     rect.midbottom[1])
+                        and (self.collision[0] or self.collision[2] or self.collision[4])):
+                    canMoveLeft = False
+                else:
+                    canMoveLeft = True
+                if ((self.rect.centery - rect.height < rect.midtop[1] and self.rect.centery + rect.height >
+                     rect.midbottom[1])
+                        and (self.collision[1] or self.collision[3] or self.collision[5])):
+                    canMoveRight = False
+                else:
+                    canMoveRight = True
+                if (self.rect.centerx - rect.width / 3 < rect.midright[0] and self.rect.centerx + rect.width / 3 >
+                    rect.midleft[0]) and (
+                        self.collision[0] or self.collision[1] or self.collision[6]):
+                    canMoveUp = False
+                else:
+                    canMoveUp = True
+                if (self.rect.centerx - rect.width / 3 < rect.midright[0] and self.rect.centerx + rect.width / 3 >
+                    rect.midleft[0]) and (
+                        self.collision[2] or self.collision[3] or self.collision[7]):
+                    canMoveDown = False
+                else:
+                    canMoveDown = True
+
+            rect = []
+
+    def collision_debug(self):
         global canMoveUp, canMoveDown, canMoveLeft, canMoveRight
 
-        # if self.collision[0] or self.collision[2] or self.collision[4]:
-        #     canMoveLeft = False
-        #     print("left")
-        # else:
-        #     canMoveLeft = True
-        # if self.collision[1] or self.collision[3] or self.collision[5]:
-        #     canMoveRight = False
-        #     print("right")
-        # else:
-        #     canMoveRight = True
-        # if self.collision[0] or self.collision[1] or self.collision[6]:
-        #     canMoveUp = False
-        #     print("top")
-        # else:
-        #     canMoveUp = True
-        # if self.collision[2] or self.collision[3] or self.collision[7]:
-        #     canMoveDown = False
-        #     print("bottom")
-        # else:
-        #     canMoveDown = True
-        # if self.collision[8]:
-        #     print("center")
-        if self.collision[4]:
-            canMoveLeft = False
+        if self.collision[0] or self.collision[2] or self.collision[4]:
             print("left")
-        else:
-            canMoveLeft = True
-        if self.collision[5]:
-            canMoveRight = False
+
+        if self.collision[1] or self.collision[3] or self.collision[5]:
             print("right")
-        else:
-            canMoveRight = True
-        if self.collision[6]:
-            canMoveUp = False
+
+        if self.collision[0] or self.collision[1] or self.collision[6]:
             print("top")
-        else:
-            canMoveUp = True
-        if self.collision[7]:
-            canMoveDown = False
+
+        if self.collision[2] or self.collision[3] or self.collision[7]:
             print("bottom")
-        else:
-            canMoveDown = True
         if self.collision[8]:
             print("center")
 
     def update(self):
         self.keys_down()
         self.collisionCheck()
-        self.block_movement()
+        # self.collision_debug()
         self.collision = [False] * 9
         player_x = self.rect.centerx
         player_y = self.rect.centery
@@ -187,11 +192,12 @@ class PlayerShip(pygame.sprite.Sprite):
 class Island(pygame.sprite.Sprite):
     def __init__(self):
         super(Island, self).__init__()
-        self.x_size = 100
-        self.y_size = 100
-        self.image = pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
+        self.x_size = 250
+        self.y_size = 250
+        self.image = pygame.transform.scale(pygame.image.load("img/island.png").convert_alpha(),
                                             (self.x_size, self.y_size))
         self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
+        self.mask = pygame.mask.from_surface(self.image)
         self.alternatespeed = 5
 
     def keys_down(self):
@@ -265,6 +271,7 @@ class Fish(pygame.sprite.Sprite):
         self.backward_pics = [backward1, backward2, backward3, backward4]
         self.image = forward1
         self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
+        self.mask = pygame.mask.from_surface(self.image)
         self.movement_speed = 7
         self.alternatespeed = 5
         self.forward = True
@@ -320,6 +327,7 @@ class Fish(pygame.sprite.Sprite):
             self.image = self.forward_pics[int(self.picIndex)]
         else:
             self.image = self.backward_pics[int(self.picIndex)]
+        self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
         self.meleeAttack()
@@ -383,6 +391,8 @@ class Chest(pygame.sprite.Sprite):
         self.alternatespeed = 5
         self.buttonimage = pygame.image.load("img/E_key1.jpg")
         self.buttonrect = self.buttonimage.get_rect(center=(self.rect.centerx, self.rect.centery + 100))
+        while pygame.sprite.spritecollide(self, islands, False):
+            self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
 
     def alternatemovement(self):
         keys = pygame.key.get_pressed()
