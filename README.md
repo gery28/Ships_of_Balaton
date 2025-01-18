@@ -1,17 +1,19 @@
 # Ships_of_Balaton
  
-A little arcade game I made in pygame a year ago
+A little arcade game I made in pygame
 
-The main goal is to shoot down the fish (currently just sharks) and collect chests
+The main goal is to shoot down the fish (currently just swordfish) and collect chests
+You win when you collect all the chests, you lose when you run out of health
 # Controls:
-+ Movement: WASD
++ Movement: W,A,S,D
 + Cannon: Mouse1
 + Golden Circle: Q
 + Heal: R
 + Open chest: E
++ Pause: ESC
 
 # Errors:
-+ Sometimes the save switch is gets clicked twice and doesn't swich
++ Sometimes the save switch is gets clicked twice and doesn't switch
 + Sometimes the ship animation doesn't work when 2 buttons are pressed
 
 # Windows Build
