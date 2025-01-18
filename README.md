@@ -13,7 +13,7 @@ You win when you collect all the chests, you lose when you run out of health
 + Pause: ESC
 
 # Errors:
-+ Sometimes the save switch is gets clicked twice and doesn't switch
++ Sometimes the save switch gets clicked twice and doesn't switch
 + Sometimes the ship animation doesn't work when 2 buttons are pressed
 
 # Windows Build
