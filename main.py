@@ -17,6 +17,11 @@ difficulty = starting_difficulty
 health = 100
 OutOfHealth = False
 gold = 0
+alternate_speed = 5
+
+chest_number = 10
+collected_chests = 0
+
 try:
     with open("number.txt", "r") as f:
         gold = int(f.read())
@@ -33,6 +38,8 @@ game_font = pygame.font.SysFont('arial', 60)
 lostdisplay = game_font.render('', True, (255, 0, 0))
 difficultydisplay = game_font.render('Difficulty: ' + str(int(difficulty)), True, (255, 0, 0))
 golddisplay = game_font.render('Gold: ' + str(int(gold)), True, (255, 0, 0))
+chestdisplay = game_font.render('Chests opened: ' + f"{collected_chests}/{chest_number}", True, (255, 0, 0))
+pausedisplay = game_font.render('', True, (255, 0, 0))
 
 chestButtonSpawned = False
 
@@ -53,7 +60,7 @@ def distenceCalculate(x_1, y_1, x_2, y_2):
     return int((abs(x_1 - x_2)) + (abs(y_1 - y_2)))
 
 
-def drawbar(x, y, width, height, percent, color1, color2):
+def drawbar(x: int, y: int, width: int, height: int, percent: float, color1: tuple, color2: tuple):
     if percent >= 100:
         percent = 100
     pygame.draw.rect(screen, color1, (x, y, width, height))
@@ -133,8 +140,6 @@ class PlayerShip(pygame.sprite.Sprite):
 
                 self.collision[8] = rect.collidepoint(self.rect.center)
 
-                # (self.rect.midtop[1] < rect.midtop[1] and self.rect.midbottom[1] > rect.midbottom[1])
-
                 if ((self.rect.centery - rect.height < rect.midtop[1] and self.rect.centery + rect.height >
                      rect.midbottom[1])
                         and (self.collision[0] or self.collision[2] or self.collision[4])):
@@ -198,9 +203,10 @@ class Island(pygame.sprite.Sprite):
                                             (self.x_size, self.y_size))
         self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
         self.mask = pygame.mask.from_surface(self.image)
-        self.alternatespeed = 5
+        self.alternatespeed = alternate_speed
 
     def keys_down(self):
+        self.alternatespeed = alternate_speed
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w] and canMoveUp:
             self.rect.centery += self.alternatespeed
@@ -226,7 +232,7 @@ class GoldCircle(pygame.sprite.Sprite):
         self.radius = 100
         self.expansion_rate = 10
         self.thickness = 5
-        self.maxRadius = 210
+        self.maxRadius = 220
 
     def Use(self):
         self.radius += self.expansion_rate
@@ -246,34 +252,46 @@ class Fish(pygame.sprite.Sprite):
         super(Fish, self).__init__()
         self.x_size = 170
         self.y_size = 80
+        self.maxHealth = {"swordfish": 2, "squid": 3}
+        self.goldLootTable = {"swordfish": (1, 3), "squid": (4, 6)}
         self.type = "swordfish"
-        forward1 = pygame.transform.scale(pygame.image.load("img/swordfish-1.png").convert_alpha(),
+        self.health = 100
+        if self.type == "swordfish":
+            self.x_size = 170
+            self.y_size = 80
+            self.health = self.maxHealth[self.type]
+        elif self.type == "squid":
+            self.x_size = 250
+            self.y_size = 150
+            self.health = self.maxHealth[self.type]
+
+        forward1 = pygame.transform.scale(pygame.image.load(f"img/{self.type}-1.png").convert_alpha(),
                                           (self.x_size, self.y_size))
-        forward2 = pygame.transform.scale(pygame.image.load("img/swordfish-2.png").convert_alpha(),
+        forward2 = pygame.transform.scale(pygame.image.load(f"img/{self.type}-2.png").convert_alpha(),
                                           (self.x_size, self.y_size))
-        forward3 = pygame.transform.scale(pygame.image.load("img/swordfish-3.png").convert_alpha(),
+        forward3 = pygame.transform.scale(pygame.image.load(f"img/{self.type}-3.png").convert_alpha(),
                                           (self.x_size, self.y_size))
-        forward4 = pygame.transform.scale(pygame.image.load("img/swordfish-4.png").convert_alpha(),
+        forward4 = pygame.transform.scale(pygame.image.load(f"img/{self.type}-4.png").convert_alpha(),
                                           (self.x_size, self.y_size))
         self.forward_pics = [forward1, forward2, forward3, forward4]
         backward1 = pygame.transform.flip(
-            pygame.transform.scale(pygame.image.load("img/swordfish-1.png").convert_alpha(),
+            pygame.transform.scale(pygame.image.load(f"img/{self.type}-1.png").convert_alpha(),
                                    (self.x_size, self.y_size)), True, False)
         backward2 = pygame.transform.flip(
-            pygame.transform.scale(pygame.image.load("img/swordfish-2.png").convert_alpha(),
+            pygame.transform.scale(pygame.image.load(f"img/{self.type}-2.png").convert_alpha(),
                                    (self.x_size, self.y_size)), True, False)
         backward3 = pygame.transform.flip(
-            pygame.transform.scale(pygame.image.load("img/swordfish-3.png").convert_alpha(),
+            pygame.transform.scale(pygame.image.load(f"img/{self.type}-3.png").convert_alpha(),
                                    (self.x_size, self.y_size)), True, False)
         backward4 = pygame.transform.flip(
-            pygame.transform.scale(pygame.image.load("img/swordfish-4.png").convert_alpha(),
+            pygame.transform.scale(pygame.image.load(f"img/{self.type}-4.png").convert_alpha(),
                                    (self.x_size, self.y_size)), True, False)
         self.backward_pics = [backward1, backward2, backward3, backward4]
         self.image = forward1
         self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
         self.mask = pygame.mask.from_surface(self.image)
         self.movement_speed = 7
-        self.alternatespeed = 5
+        self.alternatespeed = alternate_speed
         self.forward = True
         self.picIndex = 0
         self.target_x = WIDHT / 2
@@ -282,6 +300,7 @@ class Fish(pygame.sprite.Sprite):
         self.y_float = self.rect.centery
 
     def keys_down(self):
+        self.alternatespeed = alternate_speed
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w] and canMoveUp:
             self.rect.centery += self.alternatespeed
@@ -317,6 +336,19 @@ class Fish(pygame.sprite.Sprite):
         # elif player_y - self.rect.centery < 0:
         #     self.rect.top -= self.movement_speed
 
+    def health_bar(self):
+        global gold
+        if pygame.sprite.spritecollide(self, canonballs, True):
+            self.health -= 1
+
+        drawbar(self.rect.topleft[0] + self.rect.width / 10, self.rect.topleft[1] + self.rect.height / 10,
+                self.rect.width - self.rect.width / 5, self.rect.height / 5,
+                self.health / self.maxHealth[self.type] * 100, (255, 0, 0),
+                (0, 255, 0))
+        if self.health <= 0:
+            gold += random.randint(*self.goldLootTable[self.type])
+            self.kill()
+
     def imageLoad(self):
         if self.picIndex < len(self.forward_pics) - 1:
             self.picIndex += 0.3
@@ -333,6 +365,7 @@ class Fish(pygame.sprite.Sprite):
         self.meleeAttack()
         self.imageLoad()
         self.keys_down()
+        self.health_bar()
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -346,7 +379,7 @@ class Bullet(pygame.sprite.Sprite):
         self.center_y = HEIGHT / 2
         self.x_float = self.center_x
         self.y_float = self.center_y
-        self.speed = 10
+        self.speed = 15
         self.goldget = 0
         self.hittedenemy = ""
 
@@ -364,18 +397,14 @@ class Bullet(pygame.sprite.Sprite):
 
     def reach(self):
         global gold
-        if abs(self.rect.centerx - self.target_x) <= 5 and abs(self.rect.centery - self.target_y) <= 5:
+        if abs(self.rect.centerx - self.target_x) <= 10 and abs(self.rect.centery - self.target_y) <= 10:
             self.kill()
 
         if pygame.sprite.spritecollide(self, fishes, False):
             # needed when multiple enemy types added
-            collided_enemies = pygame.sprite.spritecollide(self, fishes, True)
-            for enemy in collided_enemies:
-                self.hittedenemy = enemy.type
-            if self.hittedenemy == "swordfish":
-                self.goldget = random.randint(1, 3)
-            gold += self.goldget
-            self.kill()
+            collided_enemies = pygame.sprite.spritecollide(self, fishes, False)
+            # for enemy in collided_enemies:
+            #     self.hittedenemy = enemy.type
 
     def update(self):
         self.shoot()
@@ -388,13 +417,15 @@ class Chest(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(pygame.image.load("img/Chest_closed.png").convert_alpha(), (100, 100))
         self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
         self.opened = False
-        self.alternatespeed = 5
+        self.alternatespeed = alternate_speed
         self.buttonimage = pygame.image.load("img/E_key1.jpg")
         self.buttonrect = self.buttonimage.get_rect(center=(self.rect.centerx, self.rect.centery + 100))
         while pygame.sprite.spritecollide(self, islands, False):
-            self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
+            self.rect.centerx, self.rect.centery = random.randint(-1200, 2400), random.randint(-800, 1600)
+            print("asd")
 
     def alternatemovement(self):
+        self.alternatespeed = alternate_speed
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w] and canMoveUp:
             self.rect.centery += self.alternatespeed
@@ -406,11 +437,12 @@ class Chest(pygame.sprite.Sprite):
             self.rect.centerx -= self.alternatespeed
 
     def openState(self):
-        global gold
+        global gold, collected_chests
         if self.inRange() and not self.opened and pygame.key.get_pressed()[pygame.K_e]:
             self.opened = True
             self.image = pygame.transform.scale(pygame.image.load("img/Chest _open.png").convert_alpha(), (100, 100))
             gold += random.randint(1, 5)
+            collected_chests += 1
 
     def inRange(self):
         if abs(player_x - self.rect.centerx) + abs(player_y - self.rect.centery) <= 250 and not self.opened:
@@ -439,12 +471,13 @@ class StartButton(pygame.sprite.Sprite):
         self.logorect = self.logoimage.get_rect(center=(self.rect.centerx, self.rect.centery - 400))
 
     def Clicking(self):
-        global inGame
+        global inGame, pause
         if self.rect.collidepoint(pygame.mouse.get_pos()):
             self.image = pygame.transform.scale(pygame.image.load("img/start2_button_green.png").convert_alpha(),
                                                 (self.xsize, self.ysize))
             if pygame.mouse.get_pressed()[0] and inGame == False:
                 inGame = True
+                pause = False
                 spawn_timer = pygame.USEREVENT + 1
                 pygame.time.set_timer(difficulty_timer, 3000)
                 health = 100
@@ -482,10 +515,10 @@ class SaveButton(pygame.sprite.Sprite):
     def update(self):
         self.Clicking()
         if savestate:
-            self.image = pygame.transform.scale(pygame.image.load("img/save_on.png").convert_alpha(),
+            self.image = pygame.transform.scale(pygame.image.load("img/save_off.png").convert_alpha(),
                                                 (self.xsize, self.ysize))
         else:
-            self.image = pygame.transform.scale(pygame.image.load("img/save_off.png").convert_alpha(),
+            self.image = pygame.transform.scale(pygame.image.load("img/save_on.png").convert_alpha(),
                                                 (self.xsize, self.ysize))
         if inGame:
             self.kill()
@@ -500,14 +533,6 @@ startButton = pygame.sprite.GroupSingle()
 saveButton = pygame.sprite.GroupSingle()
 chests = pygame.sprite.Group()
 
-playership.add(PlayerShip())
-for i in range(int(difficulty)):
-    fishes.add(Fish())
-for i in range(10):
-    chests.add(Chest())
-for i in range(10):
-    islands.add(Island())
-
 
 def respawn_sequence():
     fishes.empty()
@@ -516,17 +541,20 @@ def respawn_sequence():
     for i in range(int(difficulty)):
         fishes.add(Fish())
     for i in range(10):
-        chests.add(Chest())
-    for i in range(10):
         islands.add(Island())
+    for i in range(chest_number):
+        chests.add(Chest())
 
+
+playership.add(PlayerShip())
+respawn_sequence()
 
 lastshoot = pygame.time.get_ticks()
 lastUseCircle = pygame.time.get_ticks()
 lastHealed = pygame.time.get_ticks()
 lastSaved = pygame.time.get_ticks()
 now = pygame.time.get_ticks()
-delay = 300
+delay = 250
 goldcircledelay = 2000
 healdelay = 3000
 
@@ -536,6 +564,7 @@ noStartButton = True
 noSaveButton = True
 canPressSave = False
 quit_signal = False
+pause = False
 
 while running:
     now = pygame.time.get_ticks()
@@ -568,23 +597,34 @@ while running:
                     lastHealed = pygame.time.get_ticks()
                 if event.key == pygame.K_ESCAPE:
                     inGame = False
+                    pause = True
                     noStartButton = True
                     noSaveButton = True
     if quit_signal:
         pygame.quit()
         break
+    if pause:
+        pausedisplay = game_font.render('Paused', True, (255, 0, 0))
     if inGame:
         if health <= 0:
             lostdisplay = game_font.render('You lost', True, (255, 0, 0))
             screen.blit(lostdisplay, (400, 300))
             OutOfHealth = True
+        if chest_number <= collected_chests:
+            lostdisplay = game_font.render('You won', True, (0, 255, 0))
+            screen.blit(lostdisplay, (400, 300))
+            collected_chests = 0
+            gold += 10
+            OutOfHealth = True
+
         screen.fill((0, 0, 255))
-        playership.draw(screen)
-        fishes.draw(screen)
-        canonballs.draw(screen)
+
         goldCirce.draw(screen)
         islands.draw(screen)
+        playership.draw(screen)
         chests.draw(screen)
+        fishes.draw(screen)
+        canonballs.draw(screen)
         playership.update()
         fishes.update()
         canonballs.update()
@@ -599,9 +639,14 @@ while running:
         screen.blit(Q_key_image, (WIDHT - 400, HEIGHT - 70))
         screen.blit(R_key_image, (WIDHT - 400, HEIGHT - 170))
         golddisplay = game_font.render('Gold: ' + str(int(gold)), True, (255, 0, 0))
+        chestdisplay = game_font.render('Chests opened: ' + f"{collected_chests}/{chest_number}", True, (255, 0, 0))
         difficultydisplay = game_font.render('Difficulty: ' + str(int(difficulty)), True, (255, 0, 0))
-        screen.blit(difficultydisplay, (0, HEIGHT - 70))
-        screen.blit(golddisplay, (WIDHT - 250, 0))
+        # screen.blit(difficultydisplay, (0, HEIGHT - 70))
+        # screen.blit(golddisplay, (WIDHT - 250, 0))
+        # screen.blit(lostdisplay, (400, 300))
+        screen.blit(difficultydisplay, (0, HEIGHT - 140))
+        screen.blit(golddisplay, (0, HEIGHT - 210))
+        screen.blit(chestdisplay, (0, HEIGHT - 70))
         screen.blit(lostdisplay, (400, 300))
         pygame.display.update()
         clock.tick(30)
@@ -617,6 +662,7 @@ while running:
         OutOfHealth = False
         lostdisplay = game_font.render('', True, (255, 0, 0))
         screen.fill((66, 245, 242))
+        screen.blit(pausedisplay, (WIDHT / 2, 300))
         if noStartButton:
             startButton.add(StartButton())
             noStartButton = False
