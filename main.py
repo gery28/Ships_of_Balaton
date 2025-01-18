@@ -422,7 +422,6 @@ class Chest(pygame.sprite.Sprite):
         self.buttonrect = self.buttonimage.get_rect(center=(self.rect.centerx, self.rect.centery + 100))
         while pygame.sprite.spritecollide(self, islands, False):
             self.rect.centerx, self.rect.centery = random.randint(-1200, 2400), random.randint(-800, 1600)
-            print("asd")
 
     def alternatemovement(self):
         self.alternatespeed = alternate_speed
