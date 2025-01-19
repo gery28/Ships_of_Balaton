@@ -3,14 +3,15 @@ import time
 
 import pygame
 import math
+import asyncio
 
 pygame.init()
-WIDHT = 1200
-HEIGHT = 800
+WIDTH = 1500
+HEIGHT = 1000
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode((WIDHT, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Ships of Balaton")
-player_x = WIDHT / 2
+player_x = WIDTH / 2
 player_y = HEIGHT / 2
 starting_difficulty = 5
 difficulty = starting_difficulty
@@ -50,7 +51,7 @@ canMoveRight = True
 
 
 def inScreen(x_pos, y_pos):
-    if x_pos > 0 and x_pos < WIDHT and y_pos > 0 and y_pos < HEIGHT:
+    if x_pos > 0 and x_pos < WIDTH and y_pos > 0 and y_pos < HEIGHT:
         return True
     else:
         return False
@@ -81,7 +82,7 @@ class PlayerShip(pygame.sprite.Sprite):
         self.ysize = 200
         self.image = pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
                                             (self.xsize, self.ysize))
-        self.rect = self.image.get_rect(center=(WIDHT / 2, HEIGHT / 2))
+        self.rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
         self.mask = pygame.mask.from_surface(self.image)
         self.speed = 5
         self.collision = [False] * 9
@@ -294,7 +295,7 @@ class Fish(pygame.sprite.Sprite):
         self.alternatespeed = alternate_speed
         self.forward = True
         self.picIndex = 0
-        self.target_x = WIDHT / 2
+        self.target_x = WIDTH / 2
         self.target_y = HEIGHT / 2
         self.x_float = self.rect.centerx
         self.y_float = self.rect.centery
@@ -372,10 +373,10 @@ class Bullet(pygame.sprite.Sprite):
     def __init__(self, target_x, target_y):
         super(Bullet, self).__init__()
         self.image = pygame.transform.scale(pygame.image.load("img/canonball.png").convert_alpha(), (40, 40))
-        self.rect = self.rect = self.image.get_rect(center=(WIDHT / 2, HEIGHT / 2))
+        self.rect = self.rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
         self.target_x = target_x
         self.target_y = target_y
-        self.center_x = WIDHT / 2
+        self.center_x = WIDTH / 2
         self.center_y = HEIGHT / 2
         self.x_float = self.center_x
         self.y_float = self.center_y
@@ -465,7 +466,7 @@ class StartButton(pygame.sprite.Sprite):
         self.ysize = 200
         self.image = pygame.transform.scale(pygame.image.load("img/start2_button_red.png").convert_alpha(),
                                             (self.xsize, self.ysize))
-        self.rect = self.image.get_rect(center=(WIDHT / 2, 500))
+        self.rect = self.image.get_rect(center=(WIDTH / 2, 500))
         self.logoimage = pygame.image.load("img/Logo1.png").convert_alpha()
         self.logorect = self.logoimage.get_rect(center=(self.rect.centerx, self.rect.centery - 400))
 
@@ -497,7 +498,7 @@ class SaveButton(pygame.sprite.Sprite):
         self.ysize = 100
         self.image = pygame.transform.scale(pygame.image.load("img/start2_button_red.png").convert_alpha(),
                                             (self.xsize, self.ysize))
-        self.rect = self.image.get_rect(center=(WIDHT - 100, HEIGHT - 50))
+        self.rect = self.image.get_rect(center=(WIDTH - 100, HEIGHT - 50))
 
     def Clicking(self):
         global inGame
@@ -565,113 +566,121 @@ canPressSave = False
 quit_signal = False
 pause = False
 
-while running:
-    now = pygame.time.get_ticks()
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            if savestate:
-                with open("number.txt", "w") as f:
-                    f.write(str(gold))
-            quit_signal = True
+
+async def main():
+    global gold, inGame, difficulty, lastshoot, lastUseCircle, lastHealed, healdelay, health, quit_signal, pause, \
+        collected_chests, lostdisplay, OutOfHealth, pausedisplay, noStartButton, noSaveButton
+    while running:
+        now = pygame.time.get_ticks()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                if savestate:
+                    with open("number.txt", "w") as f:
+                        f.write(str(gold))
+                quit_signal = True
+            if inGame:
+                if event.type == spawn_timer:
+                    if len(fishes) < int(difficulty):
+                        fishes.add(Fish())
+                if event.type == difficulty_timer:
+                    difficulty += 0.7
+                if pygame.mouse.get_pressed()[0] and now - lastshoot >= delay:
+                    lastshoot = pygame.time.get_ticks()
+                    canonballs.add(Bullet(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]))
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q and now - lastUseCircle >= goldcircledelay and gold >= 5:
+                        lastUseCircle = pygame.time.get_ticks()
+                        gold -= 5
+                        goldCirce.add(GoldCircle())
+                    if event.key == pygame.K_r and now - lastHealed >= healdelay and gold >= 10:
+                        healdelay = pygame.time.get_ticks()
+                        health += 20
+                        gold -= 10
+                        if health > 100:
+                            health = 100
+                        lastHealed = pygame.time.get_ticks()
+                    if event.key == pygame.K_ESCAPE:
+                        inGame = False
+                        pause = True
+                        noStartButton = True
+                        noSaveButton = True
+        if quit_signal:
+            pygame.quit()
+            break
+        if pause:
+            pausedisplay = game_font.render('Paused', True, (255, 0, 0))
         if inGame:
-            if event.type == spawn_timer:
-                if len(fishes) < int(difficulty):
-                    fishes.add(Fish())
-            if event.type == difficulty_timer:
-                difficulty += 0.7
-            if pygame.mouse.get_pressed()[0] and now - lastshoot >= delay:
-                lastshoot = pygame.time.get_ticks()
-                canonballs.add(Bullet(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]))
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q and now - lastUseCircle >= goldcircledelay and gold >= 5:
-                    lastUseCircle = pygame.time.get_ticks()
-                    gold -= 5
-                    goldCirce.add(GoldCircle())
-                if event.key == pygame.K_r and now - lastHealed >= healdelay and gold >= 10:
-                    healdelay = pygame.time.get_ticks()
-                    health += 20
-                    gold -= 10
-                    if health > 100:
-                        health = 100
-                    lastHealed = pygame.time.get_ticks()
-                if event.key == pygame.K_ESCAPE:
-                    inGame = False
-                    pause = True
-                    noStartButton = True
-                    noSaveButton = True
-    if quit_signal:
-        pygame.quit()
-        break
-    if pause:
-        pausedisplay = game_font.render('Paused', True, (255, 0, 0))
-    if inGame:
-        if health <= 0:
-            lostdisplay = game_font.render('You lost', True, (255, 0, 0))
-            screen.blit(lostdisplay, (400, 300))
-            OutOfHealth = True
-        if chest_number <= collected_chests:
-            lostdisplay = game_font.render('You won', True, (0, 255, 0))
-            screen.blit(lostdisplay, (400, 300))
-            collected_chests = 0
-            gold += 10
-            OutOfHealth = True
+            if health <= 0:
+                lostdisplay = game_font.render('You lost', True, (255, 0, 0))
+                screen.blit(lostdisplay, (400, 300))
+                OutOfHealth = True
+            if chest_number <= collected_chests:
+                lostdisplay = game_font.render('You won', True, (0, 255, 0))
+                screen.blit(lostdisplay, (400, 300))
+                collected_chests = 0
+                gold += 10
+                OutOfHealth = True
 
-        screen.fill((0, 0, 255))
+            screen.fill((0, 0, 255))
 
-        goldCirce.draw(screen)
-        islands.draw(screen)
-        playership.draw(screen)
-        chests.draw(screen)
-        fishes.draw(screen)
-        canonballs.draw(screen)
-        playership.update()
-        fishes.update()
-        canonballs.update()
-        goldCirce.update()
-        islands.update()
-        chests.update()
-        drawbar(25, 25, 300, 25, health, (0, 0, 0), (255, 0, 0))
-        drawbar(WIDHT - 360, HEIGHT - 70, 300, 25, min((now - lastUseCircle) / goldcircledelay * 100, 100),
-                (242, 128, 15), (242, 230, 65))
-        drawbar(WIDHT - 360, HEIGHT - 170, 300, 25, min((now - lastHealed) / healdelay * 100, 100), (255, 0, 0),
-                (0, 255, 0))
-        screen.blit(Q_key_image, (WIDHT - 400, HEIGHT - 70))
-        screen.blit(R_key_image, (WIDHT - 400, HEIGHT - 170))
-        golddisplay = game_font.render('Gold: ' + str(int(gold)), True, (255, 0, 0))
-        chestdisplay = game_font.render('Chests opened: ' + f"{collected_chests}/{chest_number}", True, (255, 0, 0))
-        difficultydisplay = game_font.render('Difficulty: ' + str(int(difficulty)), True, (255, 0, 0))
-        # screen.blit(difficultydisplay, (0, HEIGHT - 70))
-        # screen.blit(golddisplay, (WIDHT - 250, 0))
-        # screen.blit(lostdisplay, (400, 300))
-        screen.blit(difficultydisplay, (0, HEIGHT - 140))
-        screen.blit(golddisplay, (0, HEIGHT - 210))
-        screen.blit(chestdisplay, (0, HEIGHT - 70))
-        screen.blit(lostdisplay, (400, 300))
-        pygame.display.update()
-        clock.tick(30)
-        if OutOfHealth:
-            time.sleep(3)
-            inGame = False
-            noStartButton = True
-            difficulty = starting_difficulty
-            respawn_sequence()
+            goldCirce.draw(screen)
+            islands.draw(screen)
+            playership.draw(screen)
+            chests.draw(screen)
+            fishes.draw(screen)
+            canonballs.draw(screen)
+            playership.update()
+            fishes.update()
+            canonballs.update()
+            goldCirce.update()
+            islands.update()
+            chests.update()
+            drawbar(25, 25, 300, 25, health, (0, 0, 0), (255, 0, 0))
+            drawbar(WIDTH - 360, HEIGHT - 70, 300, 25, min((now - lastUseCircle) / goldcircledelay * 100, 100),
+                    (242, 128, 15), (242, 230, 65))
+            drawbar(WIDTH - 360, HEIGHT - 170, 300, 25, min((now - lastHealed) / healdelay * 100, 100), (255, 0, 0),
+                    (0, 255, 0))
+            screen.blit(Q_key_image, (WIDTH - 400, HEIGHT - 70))
+            screen.blit(R_key_image, (WIDTH - 400, HEIGHT - 170))
+            golddisplay = game_font.render('Gold: ' + str(int(gold)), True, (255, 0, 0))
+            chestdisplay = game_font.render('Chests opened: ' + f"{collected_chests}/{chest_number}", True, (255, 0, 0))
+            difficultydisplay = game_font.render('Difficulty: ' + str(int(difficulty)), True, (255, 0, 0))
+            # screen.blit(difficultydisplay, (0, HEIGHT - 70))
+            # screen.blit(golddisplay, (WIDTH - 250, 0))
+            # screen.blit(lostdisplay, (400, 300))
+            screen.blit(difficultydisplay, (0, HEIGHT - 140))
+            screen.blit(golddisplay, (0, HEIGHT - 210))
+            screen.blit(chestdisplay, (0, HEIGHT - 70))
+            screen.blit(lostdisplay, (400, 300))
+            pygame.display.update()
+            clock.tick(30)
+            await asyncio.sleep(0)
+            if OutOfHealth:
+                time.sleep(3)
+                inGame = False
+                noStartButton = True
+                difficulty = starting_difficulty
+                respawn_sequence()
+                health = 100
+        else:
             health = 100
-    else:
-        health = 100
-        OutOfHealth = False
-        lostdisplay = game_font.render('', True, (255, 0, 0))
-        screen.fill((66, 245, 242))
-        screen.blit(pausedisplay, (WIDHT / 2, 300))
-        if noStartButton:
-            startButton.add(StartButton())
-            noStartButton = False
-        if noSaveButton:
-            saveButton.add(SaveButton())
-        if now - lastSaved >= 100:
-            canPressSave = True
-        saveButton.update()
-        startButton.update()
-        saveButton.draw(screen)
-        startButton.draw(screen)
-        pygame.display.update()
-        clock.tick(30)
+            OutOfHealth = False
+            lostdisplay = game_font.render('', True, (255, 0, 0))
+            screen.fill((66, 245, 242))
+            screen.blit(pausedisplay, (WIDTH / 2, 300))
+            if noStartButton:
+                startButton.add(StartButton())
+                noStartButton = False
+            if noSaveButton:
+                saveButton.add(SaveButton())
+            if now - lastSaved >= 100:
+                canPressSave = True
+            saveButton.update()
+            startButton.update()
+            saveButton.draw(screen)
+            startButton.draw(screen)
+            pygame.display.update()
+            clock.tick(30)
+            await asyncio.sleep(0)
+
+asyncio.run(main())
