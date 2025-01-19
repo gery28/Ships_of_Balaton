@@ -28,7 +28,7 @@ try:
         gold = int(f.read())
 except:
     gold = 0
-savestate = False
+savestate = True
 
 spawn_timer = pygame.USEREVENT + 1
 difficulty_timer = pygame.USEREVENT + 1
@@ -79,7 +79,7 @@ class PlayerShip(pygame.sprite.Sprite):
         super(PlayerShip, self).__init__()
         self.image = pygame.image.load("img/Ship_full.png").convert_alpha()
         self.xsize = 250
-        self.ysize = 200
+        self.ysize = 250
         self.image = pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
                                             (self.xsize, self.ysize))
         self.rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
@@ -196,13 +196,39 @@ class PlayerShip(pygame.sprite.Sprite):
 
 
 class Island(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, type="asd", piece=0):
         super(Island, self).__init__()
-        self.x_size = 250
-        self.y_size = 250
-        self.image = pygame.transform.scale(pygame.image.load("img/island.png").convert_alpha(),
-                                            (self.x_size, self.y_size))
-        self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
+        if type != "wall":
+            self.x_size = 250
+            self.y_size = 250
+            self.image = pygame.transform.scale(pygame.image.load("img/island.png").convert_alpha(),
+                                                (self.x_size, self.y_size))
+            self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
+        else:
+            if piece == 0:
+                self.x_size = 2400 * 4
+                self.y_size = 2000
+                self.image = pygame.transform.scale(pygame.image.load("img/wave.png").convert_alpha(),
+                                                    (self.x_size, self.y_size))
+                self.rect = self.image.get_rect(center=(0, -2000 - self.y_size))
+            elif piece == 1:
+                self.x_size = 2400 * 4
+                self.y_size = 2000
+                self.image = pygame.transform.scale(pygame.image.load("img/wave.png").convert_alpha(),
+                                                    (self.x_size, self.y_size))
+                self.rect = self.image.get_rect(center=(0, 2000 + self.y_size))
+            elif piece == 2:
+                self.x_size = 2000
+                self.y_size = 2400 * 4
+                self.image = pygame.transform.scale(pygame.image.load("img/wave.png").convert_alpha(),
+                                                    (self.x_size, self.y_size))
+                self.rect = self.image.get_rect(center=(-2000 - self.x_size, 0))
+            elif piece == 3:
+                self.x_size = 2000
+                self.y_size = 2400 * 4
+                self.image = pygame.transform.scale(pygame.image.load("img/wave.png").convert_alpha(),
+                                                    (self.x_size, self.y_size))
+                self.rect = self.image.get_rect(center=(2000 + self.x_size, 0))
         self.mask = pygame.mask.from_surface(self.image)
         self.alternatespeed = alternate_speed
 
@@ -254,17 +280,22 @@ class Fish(pygame.sprite.Sprite):
         self.x_size = 170
         self.y_size = 80
         self.maxHealth = {"swordfish": 2, "squid": 3}
-        self.goldLootTable = {"swordfish": (1, 3), "squid": (4, 6)}
+        self.goldLootTable = {"swordfish": (1, 3), "squid": (4, 7)}
         self.type = "swordfish"
+        self.movement_speed = 7
+        self.alternatespeed = alternate_speed
+        if random.randint(1, 3) == 3:
+            self.type = "squid"
         self.health = 100
         if self.type == "swordfish":
             self.x_size = 170
             self.y_size = 80
             self.health = self.maxHealth[self.type]
         elif self.type == "squid":
-            self.x_size = 250
-            self.y_size = 150
+            self.x_size = 170
+            self.y_size = 80
             self.health = self.maxHealth[self.type]
+            self.movement_speed = 6
 
         forward1 = pygame.transform.scale(pygame.image.load(f"img/{self.type}-1.png").convert_alpha(),
                                           (self.x_size, self.y_size))
@@ -291,8 +322,6 @@ class Fish(pygame.sprite.Sprite):
         self.image = forward1
         self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
         self.mask = pygame.mask.from_surface(self.image)
-        self.movement_speed = 7
-        self.alternatespeed = alternate_speed
         self.forward = True
         self.picIndex = 0
         self.target_x = WIDTH / 2
@@ -440,7 +469,7 @@ class Chest(pygame.sprite.Sprite):
         global gold, collected_chests
         if self.inRange() and not self.opened and pygame.key.get_pressed()[pygame.K_e]:
             self.opened = True
-            self.image = pygame.transform.scale(pygame.image.load("img/Chest _open.png").convert_alpha(), (100, 100))
+            self.image = pygame.transform.scale(pygame.image.load("img/Chest_open.png").convert_alpha(), (100, 100))
             gold += random.randint(1, 5)
             collected_chests += 1
 
@@ -515,10 +544,10 @@ class SaveButton(pygame.sprite.Sprite):
     def update(self):
         self.Clicking()
         if savestate:
-            self.image = pygame.transform.scale(pygame.image.load("img/save_off.png").convert_alpha(),
+            self.image = pygame.transform.scale(pygame.image.load("img/save_on.png").convert_alpha(),
                                                 (self.xsize, self.ysize))
         else:
-            self.image = pygame.transform.scale(pygame.image.load("img/save_on.png").convert_alpha(),
+            self.image = pygame.transform.scale(pygame.image.load("img/save_off.png").convert_alpha(),
                                                 (self.xsize, self.ysize))
         if inGame:
             self.kill()
@@ -540,6 +569,8 @@ def respawn_sequence():
     islands.empty()
     for i in range(int(difficulty)):
         fishes.add(Fish())
+    for i in range(4):
+        islands.add(Island("wall", i))
     for i in range(10):
         islands.add(Island())
     for i in range(chest_number):
@@ -682,5 +713,6 @@ async def main():
             pygame.display.update()
             clock.tick(30)
             await asyncio.sleep(0)
+
 
 asyncio.run(main())
