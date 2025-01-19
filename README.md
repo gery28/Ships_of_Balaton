@@ -2,7 +2,7 @@
  
 A little arcade game I made in pygame
 
-The main goal is to shoot down the fish (currently just swordfish) and collect chests
+The main goal is to shoot down the fish and collect chests
 You win when you collect all the chests, you lose when you run out of health
 # Controls:
 + Movement: W,A,S,D
