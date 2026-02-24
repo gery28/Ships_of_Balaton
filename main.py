@@ -413,7 +413,7 @@ class Fish(pygame.sprite.Sprite):
         global now, trident_delay
         if self.type == "trident_girl":
             if now - self.timer >= trident_delay and math.sqrt(
-                    (self.rect.centerx + WIDTH / 2) ** 2 + (self.rect.centery + HEIGHT / 2) ** 2) <= 1500:
+                    (self.rect.centerx - WIDTH / 2) ** 2 + (self.rect.centery - HEIGHT / 2) ** 2) <= 1500:
                 self.timer = now
                 trident.add(Bullet(self.rect.centerx, self.rect.centery, enemy=True))
 
@@ -514,7 +514,7 @@ class Bullet(pygame.sprite.Sprite):
                 asd = pygame.sprite.spritecollide(self, trident, True, pygame.sprite.collide_mask)
                 self.kill()
         if not inScreen(self.rect.centery, self.rect.centery) and self.enemy and math.sqrt(
-                (self.origin_x + WIDTH / 2) ** 2 + self.origin_y + HEIGHT / 2 ** 2) >= 2000:
+                (self.origin_x - WIDTH / 2) ** 2 + self.origin_y - HEIGHT / 2 ** 2) >= 2000:
             self.kill()
         if not inScreen(self.rect.centery, self.rect.centery) and not self.enemy:
             self.kill()
