@@ -6,8 +6,8 @@ import pygame
 import math
 
 pygame.init()
-WIDTH = 1200
-HEIGHT = 800
+WIDTH = 1500
+HEIGHT = 1000
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Ships of Balaton")
