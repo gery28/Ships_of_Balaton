@@ -1,13 +1,13 @@
 import random
 import time
+import asyncio
 
 import pygame
 import math
-import asyncio
 
 pygame.init()
-WIDTH = 1500
-HEIGHT = 1000
+WIDTH = 1200
+HEIGHT = 800
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Ships of Balaton")
@@ -22,6 +22,9 @@ alternate_speed = 5
 
 chest_number = 10
 collected_chests = 0
+
+hypercharged = False
+hypepcharge_number = 4
 
 try:
     with open("number.txt", "r") as f:
@@ -86,34 +89,54 @@ class PlayerShip(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.speed = 5
         self.collision = [False] * 9
+        self.rotation_direction = 1
 
     def rotation(self, rotationface):
-        if rotationface == 1:
-            self.image = pygame.transform.rotate(
-                pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
-                                       (self.xsize, self.ysize)), 90)
-        elif rotationface == 2:
-            self.image = pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
-                                                (self.xsize, self.ysize))
-        elif rotationface == 3:
-            self.image = pygame.transform.rotate(
-                pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
-                                       (self.xsize, self.ysize)), 270)
-        elif rotationface == 4:
-            self.image = pygame.transform.flip(
-                pygame.transform.rotate(pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
-                                                               (self.xsize, self.ysize)), 180), False, True)
+        if hypercharged:
+            if rotationface == 1:
+                self.image = pygame.transform.rotate(
+                    pygame.transform.scale(pygame.image.load("img/Hypercharged_ship.png").convert_alpha(),
+                                           (self.xsize, self.ysize)), 90)
+            elif rotationface == 2:
+                self.image = pygame.transform.scale(pygame.image.load("img/Hypercharged_ship.png").convert_alpha(),
+                                                    (self.xsize, self.ysize))
+            elif rotationface == 3:
+                self.image = pygame.transform.rotate(
+                    pygame.transform.scale(pygame.image.load("img/Hypercharged_ship.png").convert_alpha(),
+                                           (self.xsize, self.ysize)), 270)
+            elif rotationface == 4:
+                self.image = pygame.transform.flip(
+                    pygame.transform.rotate(
+                        pygame.transform.scale(pygame.image.load("img/Hypercharged_ship.png").convert_alpha(),
+                                               (self.xsize, self.ysize)), 180), False, True)
+        else:
+            if rotationface == 1:
+                self.image = pygame.transform.rotate(
+                    pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
+                                           (self.xsize, self.ysize)), 90)
+            elif rotationface == 2:
+                self.image = pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
+                                                    (self.xsize, self.ysize))
+            elif rotationface == 3:
+                self.image = pygame.transform.rotate(
+                    pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
+                                           (self.xsize, self.ysize)), 270)
+            elif rotationface == 4:
+                self.image = pygame.transform.flip(
+                    pygame.transform.rotate(
+                        pygame.transform.scale(pygame.image.load("img/Ship_full.png").convert_alpha(),
+                                               (self.xsize, self.ysize)), 180), False, True)
 
     def keys_down(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
-            self.rotation(1)
+            self.rotation_direction = 1
         elif keys[pygame.K_d]:
-            self.rotation(2)
+            self.rotation_direction = 2
         elif keys[pygame.K_s]:
-            self.rotation(3)
+            self.rotation_direction = 3
         elif keys[pygame.K_a]:
-            self.rotation(4)
+            self.rotation_direction = 4
 
     def collisionCheck(self):
         global health, canMoveUp, canMoveDown, canMoveLeft, canMoveRight
@@ -122,8 +145,17 @@ class PlayerShip(pygame.sprite.Sprite):
         canMoveLeft = True
         canMoveRight = True
         rect = []
-        if pygame.sprite.spritecollide(playership.sprite, fishes, True, pygame.sprite.collide_mask):
-            health -= 5
+        hittedenemy = None
+        if pygame.sprite.spritecollide(playership.sprite, fishes, False, pygame.sprite.collide_mask):
+            collided_enemies = pygame.sprite.spritecollide(self, fishes, True, pygame.sprite.collide_mask)
+            for enemy in collided_enemies:
+                hittedenemy = enemy.type
+            if hittedenemy == "swordfish":
+                health -= 5
+            elif hittedenemy == "squid":
+                health -= 10
+            elif hittedenemy == "trident_girl":
+                health -= 30
 
         if pygame.sprite.spritecollide(self, islands, False, pygame.sprite.collide_mask):
             collided_enemies = pygame.sprite.spritecollide(self, islands, False, pygame.sprite.collide_mask)
@@ -187,6 +219,7 @@ class PlayerShip(pygame.sprite.Sprite):
 
     def update(self):
         self.keys_down()
+        self.rotation(self.rotation_direction)
         self.collisionCheck()
         # self.collision_debug()
         self.collision = [False] * 9
@@ -245,6 +278,8 @@ class Island(pygame.sprite.Sprite):
             self.rect.centerx -= self.alternatespeed
 
     def update(self):
+        global alternate_speed
+        self.alternatespeed = alternate_speed
         self.keys_down()
 
 
@@ -267,6 +302,7 @@ class GoldCircle(pygame.sprite.Sprite):
         pygame.draw.circle(self.image, goldColor, (self.radius, self.radius), self.radius, self.thickness)
         self.rect = self.image.get_rect(center=self.rect.center)
         pygame.sprite.spritecollide(self, fishes, True)
+        pygame.sprite.spritecollide(self, trident, True, pygame.sprite.collide_mask)
         if self.radius >= self.maxRadius:
             self.kill()
 
@@ -277,15 +313,18 @@ class GoldCircle(pygame.sprite.Sprite):
 class Fish(pygame.sprite.Sprite):
     def __init__(self):
         super(Fish, self).__init__()
+        self.timer = pygame.time.get_ticks()
         self.x_size = 170
         self.y_size = 80
-        self.maxHealth = {"swordfish": 2, "squid": 3}
-        self.goldLootTable = {"swordfish": (1, 3), "squid": (4, 7)}
+        self.maxHealth = {"swordfish": 2, "squid": 3, "trident_girl": 7}
+        self.goldLootTable = {"swordfish": (1, 3), "squid": (4, 7), "trident_girl": (10, 20)}
         self.type = "swordfish"
         self.movement_speed = 7
         self.alternatespeed = alternate_speed
         if random.randint(1, 3) == 3:
             self.type = "squid"
+            if random.randint(1, 2) == 2:
+                self.type = "trident_girl"
         self.health = 100
         if self.type == "swordfish":
             self.x_size = 170
@@ -296,6 +335,10 @@ class Fish(pygame.sprite.Sprite):
             self.y_size = 80
             self.health = self.maxHealth[self.type]
             self.movement_speed = 6
+        elif self.type == "trident_girl":
+            self.x_size = 300
+            self.y_size = 150
+            self.health = self.maxHealth[self.type]
 
         forward1 = pygame.transform.scale(pygame.image.load(f"img/{self.type}-1.png").convert_alpha(),
                                           (self.x_size, self.y_size))
@@ -366,6 +409,14 @@ class Fish(pygame.sprite.Sprite):
         # elif player_y - self.rect.centery < 0:
         #     self.rect.top -= self.movement_speed
 
+    def rangedAttack(self):
+        global now, trident_delay
+        if self.type == "trident_girl":
+            if now - self.timer >= trident_delay and math.sqrt(
+                    (self.rect.centerx + WIDTH / 2) ** 2 + (self.rect.centery + HEIGHT / 2) ** 2) <= 1500:
+                self.timer = now
+                trident.add(Bullet(self.rect.centerx, self.rect.centery, enemy=True))
+
     def health_bar(self):
         global gold
         if pygame.sprite.spritecollide(self, canonballs, True):
@@ -392,14 +443,19 @@ class Fish(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
-        self.meleeAttack()
+        global alternate_speed
+        self.alternatespeed = alternate_speed
+        if self.type != "trident_girl":
+            self.meleeAttack()
+        else:
+            self.rangedAttack()
         self.imageLoad()
         self.keys_down()
         self.health_bar()
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, target_x, target_y):
+    def __init__(self, target_x, target_y, angle=None, enemy=False):
         super(Bullet, self).__init__()
         self.image = pygame.transform.scale(pygame.image.load("img/canonball.png").convert_alpha(), (40, 40))
         self.rect = self.rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
@@ -412,12 +468,31 @@ class Bullet(pygame.sprite.Sprite):
         self.speed = 15
         self.goldget = 0
         self.hittedenemy = ""
+        self.angle = angle
+        self.enemy = enemy
+        self.origin_x = 0
+        self.origin_y = 0
+        if self.enemy:
+            self.speed = 7
+            self.target_x = WIDTH / 2
+            self.target_y = HEIGHT / 2 - 100
+            self.x_float = target_x
+            self.y_float = target_y
+            self.origin_x = target_x
+            self.origin_y = target_y
+
+            if not self.angle:
+                self.angle = math.atan2(self.target_y - self.y_float, self.target_x - self.x_float)
+            self.image = pygame.transform.flip(pygame.transform.rotate(
+                pygame.transform.scale(pygame.image.load("img/trident.png").convert_alpha(),
+                                       (300, 250)), (self.angle * (180 / math.pi)) - 270), True, False)
 
     def shoot(self):
         # path calculations by Nealholt
-        angle = math.atan2(self.target_y - self.y_float, self.target_x - self.x_float)
-        dx = self.speed * math.cos(angle)
-        dy = self.speed * math.sin(angle)
+        if not self.angle:
+            self.angle = math.atan2(self.target_y - self.y_float, self.target_x - self.x_float)
+        dx = self.speed * math.cos(self.angle)
+        dy = self.speed * math.sin(self.angle)
         # end of pulled code
 
         self.x_float += dx
@@ -426,15 +501,23 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.centery = int(self.y_float)
 
     def reach(self):
-        global gold
-        if abs(self.rect.centerx - self.target_x) <= 10 and abs(self.rect.centery - self.target_y) <= 10:
-            self.kill()
+        global gold, health
+        if not self.enemy:
+            if abs(self.rect.centerx - self.target_x) <= 10 and abs(self.rect.centery - self.target_y) <= 10:
+                self.kill()
 
-        if pygame.sprite.spritecollide(self, fishes, False):
-            # needed when multiple enemy types added
-            collided_enemies = pygame.sprite.spritecollide(self, fishes, False)
-            # for enemy in collided_enemies:
-            #     self.hittedenemy = enemy.type
+        if pygame.sprite.spritecollide(self, playership, False, pygame.sprite.collide_mask) and self.enemy:
+            health -= 2
+            self.kill()
+        if not self.enemy:
+            if pygame.sprite.spritecollide(self, trident, True, pygame.sprite.collide_mask):
+                asd = pygame.sprite.spritecollide(self, trident, True, pygame.sprite.collide_mask)
+                self.kill()
+        if not inScreen(self.rect.centery, self.rect.centery) and self.enemy and math.sqrt(
+                (self.origin_x + WIDTH / 2) ** 2 + self.origin_y + HEIGHT / 2 ** 2) >= 2000:
+            self.kill()
+        if not inScreen(self.rect.centery, self.rect.centery) and not self.enemy:
+            self.kill()
 
     def update(self):
         self.shoot()
@@ -483,6 +566,56 @@ class Chest(pygame.sprite.Sprite):
             screen.blit(self.buttonimage, self.buttonrect)
 
     def update(self):
+        global alternate_speed
+        self.alternatespeed = alternate_speed
+        self.alternatemovement()
+        self.openState()
+        self.buttonSpawn()
+
+
+class Hypercharge(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Hypercharge, self).__init__()
+        self.image = pygame.transform.scale(pygame.image.load("img/hypercharge.png").convert_alpha(), (145, 109))
+        self.rect = self.image.get_rect(center=(random.randint(-1200, 2400), random.randint(-800, 1600)))
+        self.opened = False
+        self.alternatespeed = alternate_speed
+        self.buttonimage = pygame.image.load("img/E_key1.jpg")
+        self.buttonrect = self.buttonimage.get_rect(center=(self.rect.centerx, self.rect.centery + 100))
+        while pygame.sprite.spritecollide(self, islands, False):
+            self.rect.centerx, self.rect.centery = random.randint(-1200, 2400), random.randint(-800, 1600)
+
+    def alternatemovement(self):
+        self.alternatespeed = alternate_speed
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w] and canMoveUp:
+            self.rect.centery += self.alternatespeed
+        if keys[pygame.K_s] and canMoveDown:
+            self.rect.centery -= self.alternatespeed
+        if keys[pygame.K_a] and canMoveLeft:
+            self.rect.centerx += self.alternatespeed
+        if keys[pygame.K_d] and canMoveRight:
+            self.rect.centerx -= self.alternatespeed
+
+    def openState(self):
+        global hypercharged, hypercharge_start
+        if self.inRange() and not self.opened and pygame.key.get_pressed()[pygame.K_e]:
+            hypercharged = True
+            hypercharge_start = pygame.time.get_ticks()
+            self.kill()
+
+    def inRange(self):
+        if abs(player_x - self.rect.centerx) + abs(player_y - self.rect.centery) <= 250 and not self.opened:
+            return True
+
+    def buttonSpawn(self):
+        if self.inRange():
+            self.buttonrect = self.buttonimage.get_rect(center=(self.rect.centerx, self.rect.centery))
+            screen.blit(self.buttonimage, self.buttonrect)
+
+    def update(self):
+        global alternate_speed
+        self.alternatespeed = alternate_speed
         self.alternatemovement()
         self.openState()
         self.buttonSpawn()
@@ -557,16 +690,19 @@ playership = pygame.sprite.GroupSingle()
 islands = pygame.sprite.Group()
 fishes = pygame.sprite.Group()
 canonballs = pygame.sprite.Group()
+trident = pygame.sprite.Group()
 goldCirce = pygame.sprite.GroupSingle()
 startButton = pygame.sprite.GroupSingle()
 saveButton = pygame.sprite.GroupSingle()
 chests = pygame.sprite.Group()
+hypercharge = pygame.sprite.Group()
 
 
 def respawn_sequence():
     fishes.empty()
     chests.empty()
     islands.empty()
+    hypercharge.empty()
     for i in range(int(difficulty)):
         fishes.add(Fish())
     for i in range(4):
@@ -575,6 +711,8 @@ def respawn_sequence():
         islands.add(Island())
     for i in range(chest_number):
         chests.add(Chest())
+    for i in range(hypepcharge_number):
+        hypercharge.add(Hypercharge())
 
 
 playership.add(PlayerShip())
@@ -584,10 +722,15 @@ lastshoot = pygame.time.get_ticks()
 lastUseCircle = pygame.time.get_ticks()
 lastHealed = pygame.time.get_ticks()
 lastSaved = pygame.time.get_ticks()
+hypercharge_start = pygame.time.get_ticks()
+hypercharge_bullet_hell = pygame.time.get_ticks()
 now = pygame.time.get_ticks()
 delay = 250
 goldcircledelay = 2000
 healdelay = 3000
+hypercharge_time = 1500
+hypercharge_bullet_hell_time = 300
+trident_delay = 2000
 
 running = True
 inGame = False
@@ -599,8 +742,13 @@ pause = False
 
 
 async def main():
-    global gold, inGame, difficulty, lastshoot, lastUseCircle, lastHealed, healdelay, health, quit_signal, pause, \
-        collected_chests, lostdisplay, OutOfHealth, pausedisplay, noStartButton, noSaveButton
+    global running, inGame, pause, noStartButton, noSaveButton, canPressSave, quit_signal, lastSaved, gold, difficulty, \
+        starting_difficulty, chest_number, hypepcharge_number, OutOfHealth, hypercharged, alternate_speed, \
+        hypercharge_start, hypercharge_bullet_hell, now, delay, goldcircledelay, healdelay, hypercharge_time, \
+        hypercharge_bullet_hell_time, trident_delay, lastshoot, lastUseCircle, lastHealed, spawn_timer, \
+        difficulty_timer, playership, fishes, islands, canonballs, trident, goldCirce, startButton, saveButton, \
+        chests, hypercharge, health, collected_chests, savestate, pausedisplay
+
     while running:
         now = pygame.time.get_ticks()
         for event in pygame.event.get():
@@ -635,6 +783,24 @@ async def main():
                         pause = True
                         noStartButton = True
                         noSaveButton = True
+                    # if event.key == pygame.K_SPACE:
+                    #     for i in range(21):
+                    #         canonballs.add(Bullet(math.cos(math.pi / 10 * i) * 30 * math.sqrt(WIDTH ** 2 + HEIGHT ** 2),
+                    #                               math.sin(math.pi / 10 * i) * 30 * math.sqrt(WIDTH ** 2 + HEIGHT ** 2),
+                    #                               angle=math.pi / 10 * i))
+                if hypercharged:
+                    alternate_speed = 15
+                    if now - hypercharge_bullet_hell >= hypercharge_bullet_hell_time:
+                        hypercharge_bullet_hell = pygame.time.get_ticks()
+                        for i in range(21):
+                            canonballs.add(Bullet(math.cos(math.pi / 10 * i) * 30 * math.sqrt(WIDTH ** 2 + HEIGHT ** 2),
+                                                  math.sin(math.pi / 10 * i) * 30 * math.sqrt(WIDTH ** 2 + HEIGHT ** 2),
+                                                  angle=math.pi / 10 * i))
+                    if now - hypercharge_start >= hypercharge_time:
+                        hypercharged = False
+                else:
+                    alternate_speed = 5
+
         if quit_signal:
             pygame.quit()
             break
@@ -658,14 +824,18 @@ async def main():
             islands.draw(screen)
             playership.draw(screen)
             chests.draw(screen)
+            hypercharge.draw(screen)
             fishes.draw(screen)
             canonballs.draw(screen)
+            trident.draw(screen)
             playership.update()
             fishes.update()
             canonballs.update()
+            trident.update()
             goldCirce.update()
             islands.update()
             chests.update()
+            hypercharge.update()
             drawbar(25, 25, 300, 25, health, (0, 0, 0), (255, 0, 0))
             drawbar(WIDTH - 360, HEIGHT - 70, 300, 25, min((now - lastUseCircle) / goldcircledelay * 100, 100),
                     (242, 128, 15), (242, 230, 65))
