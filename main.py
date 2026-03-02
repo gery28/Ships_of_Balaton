@@ -483,9 +483,10 @@ class Bullet(pygame.sprite.Sprite):
 
             if not self.angle:
                 self.angle = math.atan2(self.target_y - self.y_float, self.target_x - self.x_float)
-            self.image = pygame.transform.flip(pygame.transform.rotate(
-                pygame.transform.scale(pygame.image.load("img/trident.png").convert_alpha(),
-                                       (300, 250)), (self.angle * (180 / math.pi)) - 270), True, False)
+            #self.image = pygame.transform.flip(pygame.transform.rotate(
+            #    pygame.transform.scale(pygame.image.load("img/trident.png").convert_alpha(),
+            #                           (300, 250)), (self.angle * (180 / math.pi)) - 270), True, False)
+            self.image = pygame.transform.scale(pygame.image.load("img/trident.png").convert_alpha(), (300, 250))
 
     def shoot(self):
         # path calculations by Nealholt
@@ -519,9 +520,23 @@ class Bullet(pygame.sprite.Sprite):
         if not inScreen(self.rect.centery, self.rect.centery) and not self.enemy:
             self.kill()
 
+    def alternatemovement(self):
+        self.alternatespeed = alternate_speed
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w] and canMoveUp:
+            self.rect.centery += self.alternatespeed
+        if keys[pygame.K_s] and canMoveDown:
+            self.rect.centery -= self.alternatespeed
+        if keys[pygame.K_a] and canMoveLeft:
+            self.rect.centerx += self.alternatespeed
+        if keys[pygame.K_d] and canMoveRight:
+            self.rect.centerx -= self.alternatespeed
+
     def update(self):
         self.shoot()
         self.reach()
+        if self.enemy:
+            self.alternatemovement()
 
 
 class Chest(pygame.sprite.Sprite):
